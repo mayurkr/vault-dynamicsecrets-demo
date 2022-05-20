@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-deployment
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+      annotations:
+        vault.hashicorp.com/agent-inject: "true"
+        vault.hashicorp.com/agent-inject-secret-db-creds: "database/creds/db-app"
+        vault.hashicorp.com/agent-inject-template-db-creds: |
+          {
+          {{- with secret "database/creds/db-app" -}}
+          "db_connection": "postgresql://{{ .Data.username }}:{{ .Data.password }}@postgres-postgresql:5432/wizard"
+          {{- end }}
+          }
+        vault.hashicorp.com/role: "web"
+    spec:
+      serviceAccountName: web
+      containers:
+        - name: web
+          image: nginx
